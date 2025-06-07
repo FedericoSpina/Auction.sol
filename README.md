@@ -36,7 +36,7 @@ This contract is intended to be used with:
 ## 📄 Contract Overview
 
 ```solidity
-constructor(uint256 _durationMinutes)
+constructor(uint256 _biddingTimeMinutes)
 ```
 
 Initializes the auction with a custom duration (in minutes).
@@ -48,22 +48,28 @@ function bid() external payable
 Submit a bid. Must be at least 5% higher than the current highest bid.
 
 ```solidity
-function refundPartial() external
-```
-
-Refunds all previous bids (except the latest) for the sender.
-
-```solidity
 function endAuction() external
 ```
 
-Ends the auction, emits the winner, and pays 2% commission to the owner.
+Ends the auction. Only callable by the beneficiary after the end time has passed. Pays the auction value minus 2% commission.
 
 ```solidity
 function withdraw() external
 ```
 
-Allows non-winning bidders to reclaim their funds **after the auction ends**.
+Allows non-winning bidders (those who have been outbid) to reclaim their funds securely.
+
+```solidity
+function getWinner() external view returns (address winner, uint256 amount)
+```
+
+Returns the current highest bidder and bid value.
+
+```solidity
+function getAuctionDetails() external view returns (...)
+```
+
+Returns general auction information like end time, current highest bidder, and whether the auction has ended.
 
 ---
 
@@ -80,7 +86,7 @@ Allows non-winning bidders to reclaim their funds **after the auction ends**.
 
 - Go to the **Deploy & Run Transactions** tab
 - Select **Injected Provider - MetaMask** (make sure you're connected to **Sepolia**)
-- Set value for `_durationMinutes`: e.g. `30` (for a 30-minute auction)
+- Set value for `_biddingTimeMinutes`: e.g. `30` (for a 30-minute auction)
 - Click **Deploy**
 
 📌 **Example:**
@@ -117,34 +123,21 @@ Next bidder:
 
 ---
 
-### 🔁 4. Refund Previous Bids
+### 🏁 4. End the Auction
 
-If a bidder places multiple bids, only their last one remains. They can recover earlier bids by calling:
-
-```solidity
-refundPartial()
-```
-
-👉 Example:  
-If you bid `0.5`, then `0.6`, the contract stores `0.5` in your bid history. You can get it back using this function.
-
----
-
-### 🏁 5. End the Auction
-
-Once time has passed:
+Once the auction time has passed:
 
 ```solidity
 endAuction()
 ```
 
-- Only callable after the deadline
-- Transfers 2% of the final bid to the owner
+- Callable only by the beneficiary
+- Transfers funds minus 2% commission
 - Emits `AuctionEnded` event
 
 ---
 
-### 💸 6. Withdraw Funds (non-winners only)
+### 💸 5. Withdraw Funds (non-winners only)
 
 ```solidity
 withdraw()
@@ -153,7 +146,7 @@ withdraw()
 - Allowed only **after** the auction ends
 - **Highest bidder cannot call this**
 
-Other participants can reclaim their current bid using this function.
+Other participants can reclaim their pending returns using this function.
 
 ---
 
@@ -163,6 +156,7 @@ Other participants can reclaim their current bid using this function.
 |----------------|-----------------------------------------|------------------------------------------|
 | `NewBid`       | `address bidder, uint256 amount`       | Every time a valid new bid is placed     |
 | `AuctionEnded` | `address winner, uint256 amount`       | When `endAuction()` is called            |
+| `Withdrawal`   | `address withdrawer, uint256 amount`   | When a user successfully withdraws funds |
 
 ---
 
